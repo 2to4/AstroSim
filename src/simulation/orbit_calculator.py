@@ -6,6 +6,7 @@
 """
 
 import numpy as np
+import hashlib
 from typing import Tuple, Dict, Optional, List
 from ..domain.orbital_elements import OrbitalElements
 from ..domain.celestial_body import CelestialBody
@@ -28,13 +29,20 @@ class OrbitCalculator:
         # 数値計算設定
         self.convergence_tolerance = 1e-12
         self.max_iterations = 50
+        
+        # 軌道計算キャッシュ
+        self.position_cache: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
+        self.cache_hit_count = 0
+        self.cache_miss_count = 0
+        self.cache_max_size = 10000  # 最大キャッシュサイズ
+        self.cache_time_tolerance = 0.01  # 時間の許容誤差（日）
     
     def calculate_position_velocity(self, 
                                   orbital_elements: OrbitalElements,
                                   julian_date: float,
                                   central_mass: float = None) -> Tuple[np.ndarray, np.ndarray]:
         """
-        軌道要素から位置と速度を計算
+        軌道要素から位置と速度を計算（キャッシュ機能付き）
         
         Args:
             orbital_elements: 軌道要素
@@ -46,6 +54,17 @@ class OrbitCalculator:
         """
         if central_mass is None:
             central_mass = self.solar_mass
+        
+        # キャッシュキーを生成
+        cache_key = self._generate_cache_key(orbital_elements, julian_date, central_mass)
+        
+        # キャッシュから検索
+        cached_result = self._get_from_cache(cache_key, julian_date)
+        if cached_result is not None:
+            self.cache_hit_count += 1
+            return cached_result
+        
+        self.cache_miss_count += 1
         
         # 元期からの経過時間
         time_since_epoch = julian_date - orbital_elements.epoch
@@ -84,7 +103,127 @@ class OrbitCalculator:
             orbital_velocity, true_anomaly, orbital_elements
         )
         
-        return position, velocity
+        # 結果をキャッシュに保存
+        result = (position, velocity)
+        self._store_in_cache(cache_key, result, julian_date)
+        
+        return result
+    
+    def _generate_cache_key(self, 
+                          orbital_elements: OrbitalElements, 
+                          julian_date: float, 
+                          central_mass: float) -> str:
+        """
+        キャッシュキーを生成
+        
+        Args:
+            orbital_elements: 軌道要素
+            julian_date: ユリウス日
+            central_mass: 中心天体質量
+            
+        Returns:
+            キャッシュキー
+        """
+        # 軌道要素のハッシュを生成
+        elements_str = (
+            f"{orbital_elements.semi_major_axis:.10f}_"
+            f"{orbital_elements.eccentricity:.10f}_"
+            f"{orbital_elements.inclination:.6f}_"
+            f"{orbital_elements.longitude_of_ascending_node:.6f}_"
+            f"{orbital_elements.argument_of_perihelion:.6f}_"
+            f"{orbital_elements.mean_anomaly_at_epoch:.6f}_"
+            f"{orbital_elements.epoch:.6f}_"
+            f"{central_mass:.3e}_"
+            f"{julian_date:.6f}"
+        )
+        
+        # MD5ハッシュでキーを短縮
+        return hashlib.md5(elements_str.encode()).hexdigest()
+    
+    def _get_from_cache(self, cache_key: str, julian_date: float) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        """
+        キャッシュから結果を取得
+        
+        Args:
+            cache_key: キャッシュキー
+            julian_date: ユリウス日
+            
+        Returns:
+            キャッシュされた結果、なければNone
+        """
+        if cache_key not in self.position_cache:
+            return None
+        
+        cached_data = self.position_cache[cache_key]
+        cached_result, cached_time = cached_data['result'], cached_data['time']
+        
+        # 時間の許容誤差内かチェック
+        if abs(julian_date - cached_time) <= self.cache_time_tolerance:
+            return cached_result
+        
+        # 時間が許容誤差外なら削除
+        del self.position_cache[cache_key]
+        return None
+    
+    def _store_in_cache(self, 
+                       cache_key: str, 
+                       result: Tuple[np.ndarray, np.ndarray], 
+                       julian_date: float) -> None:
+        """
+        結果をキャッシュに保存
+        
+        Args:
+            cache_key: キャッシュキー
+            result: 計算結果
+            julian_date: ユリウス日
+        """
+        # キャッシュサイズ制限チェック
+        if len(self.position_cache) >= self.cache_max_size:
+            self._evict_oldest_cache_entry()
+        
+        self.position_cache[cache_key] = {
+            'result': result,
+            'time': julian_date,
+            'access_count': 1
+        }
+    
+    def _evict_oldest_cache_entry(self) -> None:
+        """
+        最も古いキャッシュエントリを削除
+        """
+        if not self.position_cache:
+            return
+        
+        # 最も古いエントリを探す（アクセス数が最小のもの）
+        oldest_key = min(
+            self.position_cache.keys(),
+            key=lambda k: self.position_cache[k]['access_count']
+        )
+        del self.position_cache[oldest_key]
+    
+    def clear_cache(self) -> None:
+        """キャッシュをクリア"""
+        self.position_cache.clear()
+        self.cache_hit_count = 0
+        self.cache_miss_count = 0
+    
+    def get_cache_stats(self) -> Dict[str, int]:
+        """
+        キャッシュ統計を取得
+        
+        Returns:
+            キャッシュ統計の辞書
+        """
+        total_requests = self.cache_hit_count + self.cache_miss_count
+        hit_rate = (self.cache_hit_count / total_requests * 100) if total_requests > 0 else 0
+        
+        return {
+            'cache_size': len(self.position_cache),
+            'cache_hit_count': self.cache_hit_count,
+            'cache_miss_count': self.cache_miss_count,
+            'cache_hit_rate_percent': hit_rate,
+            'total_requests': total_requests
+        }
     
     def _calculate_mean_motion(self, 
                              orbital_elements: OrbitalElements, 

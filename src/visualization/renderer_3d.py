@@ -54,6 +54,19 @@ class Renderer3D:
         # 選択状態
         self.selected_planet: Optional[str] = None
         
+        # レベルオブディテール（LOD）設定
+        self.lod_enabled = True
+        self.lod_distance_thresholds = {
+            'high': 2.0,    # 2AU以内: 高詳細
+            'medium': 10.0, # 10AU以内: 中詳細
+            'low': 50.0     # 50AU以内: 低詳細
+        }
+        self.lod_sphere_subdivisions = {
+            'high': 32,     # 高詳細: 32分割
+            'medium': 16,   # 中詳細: 16分割
+            'low': 8        # 低詳細: 8分割
+        }
+        
         # 背景設定
         self.canvas.bgcolor = (0.05, 0.05, 0.1, 1.0)  # 暗い宇宙背景
     
@@ -70,16 +83,29 @@ class Renderer3D:
     
     def _setup_lighting(self) -> None:
         """ライティングの設定"""
-        # 環境光（弱い）
-        self.ambient_light = scene.visuals.AmbientLight(
-            color=(0.3, 0.3, 0.4, 1.0)
-        )
-        
-        # 太陽からの指向性ライト
-        self.directional_light = scene.visuals.DirectionalLight(
-            color=(1.0, 1.0, 0.9, 1.0),
-            direction=(0, 0, -1)
-        )
+        # Vispy 0.15+ではライティングAPIが変更されているため、
+        # 基本的な設定のみ行う
+        try:
+            # 環境光の設定（利用可能な場合）
+            if hasattr(scene.visuals, 'AmbientLight'):
+                self.ambient_light = scene.visuals.AmbientLight(
+                    color=(0.3, 0.3, 0.4, 1.0)
+                )
+            else:
+                self.ambient_light = None
+            
+            # 指向性ライトの設定（利用可能な場合）
+            if hasattr(scene.visuals, 'DirectionalLight'):
+                self.directional_light = scene.visuals.DirectionalLight(
+                    color=(1.0, 1.0, 0.9, 1.0),
+                    direction=(0, 0, -1)
+                )
+            else:
+                self.directional_light = None
+        except Exception:
+            # ライティングが利用できない場合はスキップ
+            self.ambient_light = None
+            self.directional_light = None
     
     def add_sun(self, sun: Sun) -> None:
         """
@@ -106,7 +132,11 @@ class Renderer3D:
         self.sun_visual.transform = STTransform(translate=(0, 0, 0))
         
         # 太陽の発光効果（簡易実装）
-        self.sun_visual.shading = 'flat'
+        try:
+            self.sun_visual.shading = 'flat'
+        except AttributeError:
+            # Vispy 0.15+では shading 属性が利用できない場合がある
+            pass
     
     def add_planet(self, planet: Planet) -> None:
         """
@@ -124,11 +154,14 @@ class Renderer3D:
         visual_props = planet.get_visual_properties()
         planet_color = visual_props['color']
         
-        # 惑星の球体を作成
-        planet_sphere = scene.visuals.Sphere(
-            radius=planet_radius,
-            color=planet_color,
-            parent=self.view.scene
+        # 惑星の初期位置でLODレベルを決定
+        planet_position_scaled = planet.position * self.distance_scale
+        distance_to_camera = self._get_distance_to_camera(planet_position_scaled)
+        lod_level = self._determine_lod_level(distance_to_camera)
+        
+        # LODレベルに応じた惑星の球体を作成
+        planet_sphere = self._create_planet_sphere_with_lod(
+            planet_radius, planet_color, lod_level
         )
         
         # ラベルを作成
@@ -147,7 +180,10 @@ class Renderer3D:
             'sphere': planet_sphere,
             'label': label,
             'orbit': orbit_line,
-            'planet': planet
+            'planet': planet,
+            'lod_level': lod_level,
+            'base_radius': planet_radius,
+            'base_color': planet_color
         }
     
     def _create_orbit_line(self, planet: Planet) -> scene.visuals.Line:
@@ -209,9 +245,67 @@ class Renderer3D:
         
         return orbit_line
     
+    def _get_distance_to_camera(self, position: np.ndarray) -> float:
+        """
+        カメラからの距離を計算
+        
+        Args:
+            position: 世界座標での位置
+            
+        Returns:
+            カメラからの距離
+        """
+        camera_center = np.array(self.camera.center)
+        distance_vector = position - camera_center
+        return np.linalg.norm(distance_vector)
+    
+    def _determine_lod_level(self, distance: float) -> str:
+        """
+        距離に基づいてLODレベルを決定
+        
+        Args:
+            distance: カメラからの距離
+            
+        Returns:
+            LODレベル ('high', 'medium', 'low')
+        """
+        if not self.lod_enabled:
+            return 'high'
+        
+        if distance <= self.lod_distance_thresholds['high']:
+            return 'high'
+        elif distance <= self.lod_distance_thresholds['medium']:
+            return 'medium'
+        else:
+            return 'low'
+    
+    def _create_planet_sphere_with_lod(self, planet_radius: float, color: tuple, lod_level: str) -> scene.visuals.Sphere:
+        """
+        LODレベルに応じた惑星球体を作成
+        
+        Args:
+            planet_radius: 惑星半径
+            color: 色
+            lod_level: LODレベル
+            
+        Returns:
+            惑星球体
+        """
+        subdivisions = self.lod_sphere_subdivisions[lod_level]
+        
+        # LODレベルに応じた球体作成
+        sphere = scene.visuals.Sphere(
+            radius=planet_radius,
+            color=color,
+            subdivisions=subdivisions,
+            parent=self.view.scene
+        )
+        
+        return sphere
+    
     def update_planet_position(self, planet_name: str, position: np.ndarray) -> None:
         """
-        惑星の位置を更新
+        惑星の位置を更新（LOD自動調整付き）
         
         Args:
             planet_name: 惑星名
@@ -225,6 +319,14 @@ class Renderer3D:
         # 位置をスケール変換
         scaled_position = position * self.distance_scale
         
+        # カメラからの距離を計算してLODレベルを決定
+        distance_to_camera = self._get_distance_to_camera(scaled_position)
+        new_lod_level = self._determine_lod_level(distance_to_camera)
+        
+        # LODレベルが変更された場合、球体を再作成
+        if new_lod_level != visual_data['lod_level']:
+            self._update_planet_lod(planet_name, new_lod_level)
+        
         # 球体の位置を更新
         sphere = visual_data['sphere']
         sphere.transform = STTransform(translate=scaled_position)
@@ -233,6 +335,45 @@ class Renderer3D:
         label = visual_data['label']
         label_offset = np.array([0, 0, 0.1])  # 少し上にオフセット
         label.transform = STTransform(translate=scaled_position + label_offset)
+    
+    def _update_planet_lod(self, planet_name: str, new_lod_level: str) -> None:
+        """
+        惑星のLODレベルを更新
+        
+        Args:
+            planet_name: 惑星名
+            new_lod_level: 新しいLODレベル
+        """
+        if planet_name not in self.planet_visuals:
+            return
+        
+        visual_data = self.planet_visuals[planet_name]
+        old_sphere = visual_data['sphere']
+        
+        # 現在の位置と変換を保存
+        current_transform = old_sphere.transform
+        
+        # 新しいLODレベルで球体を再作成
+        new_sphere = self._create_planet_sphere_with_lod(
+            visual_data['base_radius'],
+            visual_data['base_color'],
+            new_lod_level
+        )
+        
+        # 位置を復元
+        new_sphere.transform = current_transform
+        
+        # 選択状態の復元
+        if self.selected_planet == planet_name:
+            new_sphere.color = (1.0, 1.0, 0.0, 1.0)  # ハイライト色
+        
+        # 古い球体を削除
+        if old_sphere.parent:
+            old_sphere.parent = None
+        
+        # 新しい球体に更新
+        visual_data['sphere'] = new_sphere
+        visual_data['lod_level'] = new_lod_level
     
     def update_planet_rotation(self, planet_name: str, rotation_angle: float) -> None:
         """
@@ -359,6 +500,58 @@ class Renderer3D:
         self.camera.distance = 5.0
         self.camera.elevation = 30
         self.camera.azimuth = 30
+        
+        # カメラ移動後のLOD更新
+        self.update_all_lod()
+    
+    def update_all_lod(self) -> None:
+        """全ての惑星のLODレベルを更新"""
+        if not self.lod_enabled:
+            return
+        
+        for planet_name, visual_data in self.planet_visuals.items():
+            planet = visual_data['planet']
+            planet_position_scaled = planet.position * self.distance_scale
+            distance_to_camera = self._get_distance_to_camera(planet_position_scaled)
+            new_lod_level = self._determine_lod_level(distance_to_camera)
+            
+            if new_lod_level != visual_data['lod_level']:
+                self._update_planet_lod(planet_name, new_lod_level)
+    
+    def set_lod_enabled(self, enabled: bool) -> None:
+        """
+        LODシステムの有効/無効を設定
+        
+        Args:
+            enabled: LODを有効にするかどうか
+        """
+        self.lod_enabled = enabled
+        
+        if enabled:
+            self.update_all_lod()
+        else:
+            # 全ての惑星を高詳細に設定
+            for planet_name in self.planet_visuals.keys():
+                self._update_planet_lod(planet_name, 'high')
+    
+    def set_lod_thresholds(self, high: float, medium: float, low: float) -> None:
+        """
+        LOD距離閾値を設定
+        
+        Args:
+            high: 高詳細の距離閾値
+            medium: 中詳細の距離閾値
+            low: 低詳細の距離閾値
+        """
+        self.lod_distance_thresholds = {
+            'high': high,
+            'medium': medium,
+            'low': low
+        }
+        
+        # 設定変更後にLODを更新
+        if self.lod_enabled:
+            self.update_all_lod()
     
     def pick_object(self, x: int, y: int) -> Optional[str]:
         """
@@ -482,6 +675,12 @@ class Renderer3D:
         Returns:
             レンダリング状態の辞書
         """
+        # LOD統計を計算
+        lod_stats = {'high': 0, 'medium': 0, 'low': 0}
+        for visual_data in self.planet_visuals.values():
+            lod_level = visual_data.get('lod_level', 'high')
+            lod_stats[lod_level] += 1
+        
         return {
             'planet_count': len(self.planet_visuals),
             'show_orbits': self.show_orbits,
@@ -489,7 +688,10 @@ class Renderer3D:
             'scale_factor': self.scale_factor,
             'selected_planet': self.selected_planet,
             'camera_distance': self.camera.distance,
-            'camera_center': self.camera.center
+            'camera_center': self.camera.center,
+            'lod_enabled': self.lod_enabled,
+            'lod_statistics': lod_stats,
+            'lod_thresholds': self.lod_distance_thresholds
         }
     
     def cleanup(self) -> None:
