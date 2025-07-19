@@ -290,6 +290,124 @@ class CameraController:
         self.camera.elevation = elevation
         self.camera.azimuth = azimuth
     
+    def update_tracking_position(self, target_position: np.ndarray) -> None:
+        """
+        追跡位置の更新（SceneManagerから呼び出し）
+        
+        Args:
+            target_position: 新しいターゲット位置
+        """
+        self.update_tracking(target_position)
+    
+    def handle_mouse_press(self, event) -> bool:
+        """
+        マウスプレスイベントの処理
+        
+        Args:
+            event: マウスイベント
+            
+        Returns:
+            イベントが処理されたかどうか
+        """
+        # 左クリック: 回転操作の開始準備
+        if event.button == 1:  # 左ボタン
+            self._mouse_press_pos = event.pos
+            return True
+        
+        # 右クリック: パン操作の開始準備
+        elif event.button == 2:  # 右ボタン
+            self._mouse_press_pos = event.pos
+            return True
+        
+        return False
+    
+    def handle_mouse_move(self, event) -> bool:
+        """
+        マウス移動イベントの処理
+        
+        Args:
+            event: マウスイベント
+            
+        Returns:
+            イベントが処理されたかどうか
+        """
+        if not hasattr(self, '_mouse_press_pos'):
+            return False
+        
+        # マウスの移動量を計算
+        if hasattr(event, 'last_event') and event.last_event:
+            dx = event.pos[0] - event.last_event.pos[0]
+            dy = event.pos[1] - event.last_event.pos[1]
+            
+            # 左ドラッグ: カメラ回転
+            if event.button == 1:
+                # マウス移動量をカメラ回転に変換
+                delta_azimuth = -dx * 0.5  # 水平移動 → 方位角
+                delta_elevation = dy * 0.5  # 垂直移動 → 仰角
+                self.rotate(delta_azimuth, delta_elevation)
+                return True
+            
+            # 右ドラッグ: カメラパン
+            elif event.button == 2:
+                # マウス移動量をパンに変換
+                pan_x = -dx * self.pan_sensitivity * self.camera.distance
+                pan_y = dy * self.pan_sensitivity * self.camera.distance
+                self.pan(pan_x, pan_y)
+                return True
+        
+        return False
+    
+    def handle_mouse_wheel(self, event) -> bool:
+        """
+        マウスホイールイベントの処理
+        
+        Args:
+            event: マウスホイールイベント
+            
+        Returns:
+            イベントが処理されたかどうか
+        """
+        if hasattr(event, 'delta'):
+            # ホイール方向に応じてズーム
+            zoom_factor = self.zoom_sensitivity if event.delta[1] > 0 else 1.0 / self.zoom_sensitivity
+            self.zoom(zoom_factor)
+            return True
+        
+        return False
+    
+    def handle_key_press(self, event) -> bool:
+        """
+        キープレスイベントの処理
+        
+        Args:
+            event: キーイベント
+            
+        Returns:
+            イベントが処理されたかどうか
+        """
+        # キーボードショートカット
+        key = event.key.name if hasattr(event.key, 'name') else str(event.key)
+        
+        if key == 'r' or key == 'R':
+            # Rキー: ビューリセット
+            self.reset_view()
+            return True
+        
+        elif key in ['1', '2', '3', '4']:
+            # 数字キー: プリセットビュー
+            presets = ['top', 'side', 'front', 'perspective']
+            preset_index = int(key) - 1
+            if 0 <= preset_index < len(presets):
+                self.set_view_preset(presets[preset_index])
+                return True
+        
+        elif key == 'Escape':
+            # Escapeキー: 追跡停止
+            self.stop_tracking()
+            return True
+        
+        return False
+    
     def get_view_matrix(self) -> np.ndarray:
         """
         現在のビュー行列を取得

@@ -371,30 +371,103 @@ class Renderer3D:
         Returns:
             選択されたオブジェクト名（惑星名）
         """
-        # 簡易的なピッキング実装
-        # 実際の実装では、レイキャスティングを使用
+        # 改良されたピッキング実装
+        canvas_size = self.canvas.size
         
-        # 現在は最も近い惑星を返す簡易版
-        canvas_coords = np.array([x, y])
+        # 画面座標を正規化 (0-1範囲)
+        norm_x = x / canvas_size[0]
+        norm_y = 1.0 - (y / canvas_size[1])  # Y軸反転
         
         min_distance = float('inf')
         selected_planet = None
         
         for planet_name, visual_data in self.planet_visuals.items():
             planet = visual_data['planet']
+            
+            # 惑星の3D位置
             planet_position = planet.position * self.distance_scale
             
-            # 3D座標を2D画面座標に変換（簡易版）
-            # 実際の実装では、カメラの変換行列を使用
-            screen_pos = np.array([planet_position[0], planet_position[1]])
+            # 3D座標を画面座標に投影
+            screen_pos = self._world_to_screen(planet_position)
             
-            distance = np.linalg.norm(canvas_coords - screen_pos * 100)  # 適当なスケール
-            
-            if distance < min_distance and distance < 50:  # 50ピクセル以内
-                min_distance = distance
-                selected_planet = planet_name
+            if screen_pos is not None:
+                # 画面座標での距離計算
+                screen_distance = np.sqrt(
+                    (norm_x - screen_pos[0])**2 + 
+                    (norm_y - screen_pos[1])**2
+                )
+                
+                # 惑星の見かけの大きさを考慮した選択範囲
+                planet_radius = max(0.002, planet.radius * self.planet_scale * self.distance_scale)
+                selection_threshold = max(0.05, planet_radius * 20)  # 画面上での選択範囲
+                
+                if screen_distance < selection_threshold and screen_distance < min_distance:
+                    min_distance = screen_distance
+                    selected_planet = planet_name
         
         return selected_planet
+    
+    def _world_to_screen(self, world_pos: np.ndarray) -> Optional[np.ndarray]:
+        """
+        ワールド座標を画面座標に変換
+        
+        Args:
+            world_pos: ワールド座標
+            
+        Returns:
+            正規化された画面座標 [0-1]
+        """
+        try:
+            # カメラの状態を取得
+            center = np.array(self.camera.center)
+            distance = self.camera.distance
+            elevation = np.radians(self.camera.elevation)
+            azimuth = np.radians(self.camera.azimuth)
+            
+            # カメラ位置計算
+            camera_x = center[0] + distance * np.cos(elevation) * np.cos(azimuth)
+            camera_y = center[1] + distance * np.cos(elevation) * np.sin(azimuth)
+            camera_z = center[2] + distance * np.sin(elevation)
+            camera_pos = np.array([camera_x, camera_y, camera_z])
+            
+            # オブジェクトからカメラへの相対位置
+            relative_pos = world_pos - center
+            
+            # カメラ方向ベクトル（中心を向く）
+            camera_dir = center - camera_pos
+            camera_dir = camera_dir / np.linalg.norm(camera_dir)
+            
+            # 右方向ベクトル
+            up_vector = np.array([0, 0, 1])
+            right_vector = np.cross(camera_dir, up_vector)
+            if np.linalg.norm(right_vector) > 0:
+                right_vector = right_vector / np.linalg.norm(right_vector)
+            else:
+                right_vector = np.array([1, 0, 0])
+            
+            # 実際の上方向ベクトル
+            actual_up = np.cross(right_vector, camera_dir)
+            
+            # 投影計算
+            projected_x = np.dot(relative_pos, right_vector)
+            projected_y = np.dot(relative_pos, actual_up)
+            depth = np.dot(relative_pos, camera_dir)
+            
+            if depth > 0:  # オブジェクトがカメラの前にある
+                # FOVを考慮した正規化
+                fov_factor = np.tan(np.radians(self.camera.fov / 2))
+                screen_x = (projected_x / (depth * fov_factor)) * 0.5 + 0.5
+                screen_y = (projected_y / (depth * fov_factor)) * 0.5 + 0.5
+                
+                # 画面範囲内チェック
+                if 0 <= screen_x <= 1 and 0 <= screen_y <= 1:
+                    return np.array([screen_x, screen_y])
+            
+            return None
+            
+        except Exception:
+            # エラー時はNoneを返す
+            return None
     
     def render(self) -> None:
         """シーンをレンダリング"""

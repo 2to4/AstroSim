@@ -75,6 +75,12 @@ class SceneManager:
         # マウスクリック処理
         self.canvas.events.mouse_press.connect(self._on_mouse_press)
         
+        # マウス移動処理
+        self.canvas.events.mouse_move.connect(self._on_mouse_move)
+        
+        # マウスリリース処理
+        self.canvas.events.mouse_release.connect(self._on_mouse_release)
+        
         # キーボード処理
         self.canvas.events.key_press.connect(self._on_key_press)
         
@@ -170,8 +176,43 @@ class SceneManager:
                 self.camera_controller.tracking_target
             )
             if target_planet:
-                target_position = target_planet.position * self.renderer.distance_scale
-                self.camera_controller.update_tracking(target_position)
+                self.camera_controller.update_tracking_position(target_planet.position)
+    
+    def update_celestial_bodies(self, solar_system: SolarSystem) -> None:
+        """
+        天体データの更新（メインアプリケーションから呼び出し）
+        
+        Args:
+            solar_system: 更新された太陽系オブジェクト
+        """
+        if self.solar_system is None:
+            # 初回の場合は太陽系データを読み込み
+            self.load_solar_system(solar_system)
+            return
+        
+        # 各惑星の描画位置を更新
+        for planet in solar_system.get_planets_list():
+            # 位置の更新（kmからAUに変換）
+            position_au = planet.position / 149597870.7  # km to AU
+            self.renderer.update_planet_position(planet.name, position_au)
+            
+            # 自転角度の更新（簡易実装）
+            # 現在のユリウス日から自転角度を計算
+            if hasattr(planet, 'rotation_period') and planet.rotation_period > 0:
+                # 現在時刻からの自転角度計算（概算）
+                rotation_angle = (solar_system.current_date * 24.0 / abs(planet.rotation_period)) % 360.0
+                if planet.rotation_period < 0:  # 逆回転（金星など）
+                    rotation_angle = -rotation_angle
+                self.renderer.update_planet_rotation(planet.name, rotation_angle)
+        
+        # 追跡中の惑星がある場合、カメラを更新
+        if hasattr(self.camera_controller, 'tracking_target') and self.camera_controller.tracking_target:
+            target_planet = solar_system.get_planet_by_name(
+                self.camera_controller.tracking_target
+            )
+            if target_planet:
+                position_au = target_planet.position / 149597870.7
+                self.camera_controller.update_tracking_position(position_au)
     
     def animate_step(self, time_delta: float) -> None:
         """
@@ -288,6 +329,9 @@ class SceneManager:
     
     def _on_mouse_press(self, event) -> None:
         """マウスクリック処理"""
+        # カメラコントローラーにイベントを転送
+        handled = self.camera_controller.handle_mouse_press(event)
+        
         if event.button == 1:  # 左クリック
             # オブジェクトピッキング
             picked_object = self.renderer.pick_object(event.pos[0], event.pos[1])
@@ -296,37 +340,49 @@ class SceneManager:
             else:
                 self.select_planet(None)
     
+    def _on_mouse_move(self, event) -> None:
+        """マウス移動処理"""
+        # カメラコントローラーにイベントを転送
+        self.camera_controller.handle_mouse_move(event)
+    
+    def _on_mouse_release(self, event) -> None:
+        """マウスリリース処理"""
+        # カメラコントローラーでマウスプレス状態をクリア
+        if hasattr(self.camera_controller, '_mouse_press_pos'):
+            delattr(self.camera_controller, '_mouse_press_pos')
+    
     def _on_key_press(self, event) -> None:
         """キー押下処理"""
-        if event.text == ' ':  # スペースキー
-            # アニメーション再生/一時停止
-            if self.is_playing:
-                self.pause_animation()
-            else:
-                self.play_animation()
-        elif event.text == 'r':  # Rキー
-            # ビューリセット
-            self.camera_controller.reset_view()
-        elif event.text == 'o':  # Oキー
-            # 軌道表示切り替え
-            current_value = self.display_settings['show_orbits']
-            self.set_display_setting('show_orbits', not current_value)
-        elif event.text == 'l':  # Lキー
-            # ラベル表示切り替え
-            current_value = self.display_settings['show_labels']
-            self.set_display_setting('show_labels', not current_value)
-        elif event.text.isdigit():  # 数字キー
-            # 惑星番号での選択
-            planet_index = int(event.text) - 1
-            if self.solar_system and 0 <= planet_index < len(self.solar_system.get_planets_list()):
-                planet = self.solar_system.get_planets_list()[planet_index]
-                self.focus_on_planet(planet.name)
+        # カメラコントローラーにイベントを転送
+        handled = self.camera_controller.handle_key_press(event)
+        
+        if not handled:
+            # SceneManager固有のキーハンドリング
+            if event.text == ' ':  # スペースキー
+                # アニメーション再生/一時停止
+                if self.is_playing:
+                    self.pause_animation()
+                else:
+                    self.play_animation()
+            elif event.text == 'o':  # Oキー
+                # 軌道表示切り替え
+                current_value = self.display_settings['show_orbits']
+                self.set_display_setting('show_orbits', not current_value)
+            elif event.text == 'l':  # Lキー
+                # ラベル表示切り替え
+                current_value = self.display_settings['show_labels']
+                self.set_display_setting('show_labels', not current_value)
+            elif event.text.isdigit():  # 数字キー（5-9）
+                # 惑星番号での選択
+                planet_index = int(event.text) - 1
+                if self.solar_system and 0 <= planet_index < len(self.solar_system.get_planets_list()):
+                    planet = self.solar_system.get_planets_list()[planet_index]
+                    self.focus_on_planet(planet.name)
     
     def _on_mouse_wheel(self, event) -> None:
         """マウスホイール処理"""
-        # ズーム処理
-        zoom_factor = 1.2 if event.delta[1] > 0 else 0.8
-        self.camera_controller.zoom(zoom_factor)
+        # カメラコントローラーにイベントを転送
+        self.camera_controller.handle_mouse_wheel(event)
     
     def get_scene_info(self) -> Dict[str, Any]:
         """
