@@ -1,0 +1,36 @@
+# 開発・テスト用依存関係
+
+# テストフレームワーク
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+pytest-qt>=4.2.0
+pytest-xvfb>=3.0.0  # GUI テスト用（Linux環境）
+pytest-timeout>=2.1.0
+
+# テストユーティリティ
+hypothesis>=6.82.0  # プロパティベーステスト
+factory-boy>=3.3.0  # テストデータ生成
+freezegun>=1.2.2    # 時間のモック
+
+# パフォーマンステスト
+pytest-benchmark>=4.0.0
+memory-profiler>=0.61.0
+
+# 開発ツール
+black>=23.7.0       # コードフォーマッター
+flake8>=6.0.0       # リンター
+mypy>=1.5.0         # 型チェック
+isort>=5.12.0       # インポートソート
+
+# カバレッジレポート
+coverage[toml]>=7.2.0
+
+# 追加のリンタープラグイン
+flake8-docstrings>=1.7.0
+flake8-import-order>=0.18.0
+flake8-type-checking>=2.4.0
+
+# 型チェック用スタブ
+types-requests>=2.31.0
+types-pillow>=10.0.0

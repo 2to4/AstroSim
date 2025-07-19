@@ -1,0 +1,25 @@
+# AstroSim 本体依存関係
+
+# 3D可視化
+vispy>=0.14.0
+PyOpenGL>=3.1.7
+
+# GUI フレームワーク
+PyQt6>=6.5.0
+
+# 科学計算
+numpy>=1.24.0
+scipy>=1.10.0
+astropy>=5.3.0
+
+# データ処理
+h5py>=3.9.0
+
+# 画像処理
+Pillow>=10.0.0
+
+# JITコンパイル（オプション）
+numba>=0.57.0
+
+# ユーティリティ
+python-dateutil>=2.8.0
