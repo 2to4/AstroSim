@@ -256,9 +256,10 @@ class TestPlanet:
         planet.update_position(2451545.0 + 1.0)  # 1日後
         angle2 = planet._calculate_rotation_angle()
         
-        # 1日で360度回転
+        # 1日で360度回転（modulo演算で0度になる）
         angle_difference = (angle2 - angle1) % 360
-        assert abs(angle_difference - 360.0) < 1e-6
+        # 360度回転は0度と等価なので、どちらかを許可
+        assert abs(angle_difference) < 1e-6 or abs(angle_difference - 360.0) < 1e-6
     
     def test_planet_comparison(self, earth_data, mars_data):
         """惑星の比較テスト"""

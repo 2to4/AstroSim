@@ -52,6 +52,9 @@ class Planet(CelestialBody):
         
         # 天文単位をkmに変換する係数
         self.AU_TO_KM = 149597870.7
+        
+        # 現在のユリウス日を追跡
+        self.current_julian_date = orbital_elements.epoch
     
     def update_position(self, julian_date: float) -> None:
         """
@@ -63,6 +66,8 @@ class Planet(CelestialBody):
         Args:
             julian_date: ユリウス日
         """
+        # 現在時刻を更新
+        self.current_julian_date = julian_date
         # 元期からの経過時間（日）
         time_since_epoch = julian_date - self.orbital_elements.epoch
         
@@ -232,9 +237,9 @@ class Planet(CelestialBody):
         Returns:
             自転角度 (度)
         """
-        # 簡易的な実装：時間に比例した回転
-        # 実際の実装では、現在時刻と自転周期から計算
-        current_time_hours = 0.0  # 実装時に適切な時刻を設定
+        # 現在時刻から自転角度を計算
+        # ユリウス日から時間に変換（1日 = 24時間）
+        current_time_hours = (self.current_julian_date - self.orbital_elements.epoch) * 24.0
         rotation_angle = (current_time_hours / self.rotation_period) * 360.0
         return rotation_angle % 360.0
     

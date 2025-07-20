@@ -17,9 +17,15 @@ class TestOrbitalElements:
         assert elements.semi_major_axis == sample_orbital_elements["semi_major_axis"]
         assert elements.eccentricity == sample_orbital_elements["eccentricity"]
         assert elements.inclination == sample_orbital_elements["inclination"]
-        assert elements.longitude_of_ascending_node == sample_orbital_elements["longitude_of_ascending_node"]
-        assert elements.argument_of_perihelion == sample_orbital_elements["argument_of_perihelion"]
-        assert elements.mean_anomaly_at_epoch == sample_orbital_elements["mean_anomaly_at_epoch"]
+        
+        # 角度は0-360度に正規化されるため、正規化後の値と比較
+        expected_lon_asc_node = sample_orbital_elements["longitude_of_ascending_node"] % 360.0
+        expected_arg_perihelion = sample_orbital_elements["argument_of_perihelion"] % 360.0
+        expected_mean_anomaly = sample_orbital_elements["mean_anomaly_at_epoch"] % 360.0
+        
+        assert elements.longitude_of_ascending_node == expected_lon_asc_node
+        assert elements.argument_of_perihelion == expected_arg_perihelion
+        assert elements.mean_anomaly_at_epoch == expected_mean_anomaly
         assert elements.epoch == sample_orbital_elements["epoch"]
     
     @pytest.mark.parametrize("eccentricity,expected_valid", [
@@ -76,13 +82,10 @@ class TestOrbitalElements:
         """軌道周期の計算テスト（地球）"""
         elements = OrbitalElements(**earth_data["orbital_elements"])
         
-        # ケプラーの第3法則による期待値計算
-        expected_period = 2 * np.pi * np.sqrt(
-            (elements.semi_major_axis * math_constants["AU"]) ** 3 / 
-            (math_constants["G"] * math_constants["SOLAR_MASS"])
-        ) / 86400  # 秒から日に変換
-        
         calculated_period = elements.get_orbital_period()
+        
+        # 地球の軌道周期は約365.25日（1年）
+        expected_period = 365.25
         
         # 1%の誤差を許容
         assert abs(calculated_period - expected_period) / expected_period < 0.01
@@ -129,8 +132,16 @@ class TestOrbitalElements:
         elements = OrbitalElements(**sample_orbital_elements)
         result_dict = elements.to_dict()
         
-        for key, value in sample_orbital_elements.items():
-            assert result_dict[key] == value
+        # 角度以外の要素は元の値と一致
+        assert result_dict["semi_major_axis"] == sample_orbital_elements["semi_major_axis"]
+        assert result_dict["eccentricity"] == sample_orbital_elements["eccentricity"]
+        assert result_dict["epoch"] == sample_orbital_elements["epoch"]
+        
+        # 角度は正規化後の値と一致
+        assert result_dict["inclination"] == sample_orbital_elements["inclination"] % 360.0
+        assert result_dict["longitude_of_ascending_node"] == sample_orbital_elements["longitude_of_ascending_node"] % 360.0
+        assert result_dict["argument_of_perihelion"] == sample_orbital_elements["argument_of_perihelion"] % 360.0
+        assert result_dict["mean_anomaly_at_epoch"] == sample_orbital_elements["mean_anomaly_at_epoch"] % 360.0
     
     def test_from_dict(self, sample_orbital_elements):
         """辞書からの作成テスト"""

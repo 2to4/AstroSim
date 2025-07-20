@@ -242,6 +242,9 @@ class AstroSimLogger:
         # AstroSim例外の場合は詳細情報を取得
         if isinstance(exception, AstroSimException):
             details = exception.to_dict()
+            # 'message' キーを 'exception_message' に変更して重複を避ける
+            if 'message' in details:
+                details['exception_message'] = details.pop('message')
             details.update(context)
         else:
             details = {
@@ -253,9 +256,9 @@ class AstroSimLogger:
         
         # レベルに応じてログ出力
         if error_level == ErrorLevel.CRITICAL:
-            self.critical(f"重要エラーが発生しました: {exception}", exception=exception, **details)
+            self.critical(f"重要エラーが発生しました: {exception}", **details)
         elif error_level == ErrorLevel.ERROR:
-            self.error(f"エラーが発生しました: {exception}", exception=exception, **details)
+            self.error(f"エラーが発生しました: {exception}", **details)
         elif error_level == ErrorLevel.WARNING:
             self.warning(f"警告: {exception}", **details)
         else:

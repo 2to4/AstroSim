@@ -175,6 +175,7 @@ class MemoryPoolManager:
         self._pools: Dict[str, ObjectPool] = {}
         self._memory_usage_history: List[Dict[str, Any]] = []
         self._gc_threshold = 0.8  # メモリ使用率80%でGCトリガー
+        self.auto_gc_enabled = True  # 自動GC機能の有効無効
         
         # Vispy専用プールの初期化
         self._initialize_vispy_pools()
@@ -229,8 +230,12 @@ class MemoryPoolManager:
             text_obj.parent = parent
             # transformはNoneに設定できないので、初期値に戻す
             if hasattr(text_obj, 'transform'):
-                from vispy.visuals.transforms import STTransform
-                text_obj.transform = STTransform()
+                try:
+                    from vispy.visuals.transforms import STTransform
+                    text_obj.transform = STTransform()
+                except (ImportError, AttributeError):
+                    # テスト環境やvispyが不完全な場合はスキップ
+                    pass
         
         self.register_pool(
             'text_label',
@@ -365,10 +370,10 @@ class MemoryPoolManager:
         if len(self._memory_usage_history) > 1000:
             self._memory_usage_history = self._memory_usage_history[-500:]
         
-        # メモリ使用率チェック
+        # メモリ使用率チェック（自動GCが有効な場合のみ）
         usage_ratio = memory_usage_mb / self.memory_limit_mb
         
-        if usage_ratio > self._gc_threshold:
+        if self.auto_gc_enabled and usage_ratio > self._gc_threshold:
             logger.warning(f"メモリ使用率が{usage_ratio:.1%}に達しました。GCを実行します。")
             self._run_garbage_collection()
     

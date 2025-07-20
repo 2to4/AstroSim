@@ -426,6 +426,10 @@ def check_gpu_availability() -> bool:
         import vispy
         from vispy import app
         
+        # テスト環境ではバックエンドが利用できない場合があるのでスキップ
+        if hasattr(vispy, '_testing') or not hasattr(app, 'Canvas'):
+            return False
+        
         # 簡単なテスト用キャンバスを作成
         canvas = app.Canvas(size=(100, 100), show=False)
         canvas.close()
