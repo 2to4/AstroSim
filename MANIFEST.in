@@ -1,0 +1,51 @@
+# AstroSim Package Manifest
+# パッケージに含める追加ファイルの指定
+
+# ドキュメント
+include README.md
+include LICENSE
+include CHANGELOG.md
+recursive-include docs *.md
+recursive-include docs *.txt
+recursive-include docs *.rst
+
+# 設定ファイル
+include requirements.txt
+include requirements-dev.txt
+include pytest.ini
+include setup.cfg
+include pyproject.toml
+
+# データファイル
+recursive-include src/data *.json
+recursive-include src/data *.csv
+recursive-include src/data *.txt
+
+# アセット
+recursive-include assets *.png
+recursive-include assets *.jpg
+recursive-include assets *.ico
+recursive-include assets *.svg
+
+# PyInstaller関連
+include astrosim.spec
+include version_info.txt
+
+# Git関連
+include .gitignore
+include .gitattributes
+
+# 除外ファイル
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.pyd
+global-exclude __pycache__
+global-exclude *.so
+global-exclude .DS_Store
+global-exclude Thumbs.db
+recursive-exclude tests *
+recursive-exclude build *
+recursive-exclude dist *
+recursive-exclude *.egg-info *
+exclude .coverage
+exclude coverage.xml

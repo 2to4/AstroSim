@@ -1,0 +1,221 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astrosim"
+version = "1.0.0"
+description = "AstroSim - 3D太陽系惑星軌道シミュレーター"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Claude Code", email = "noreply@anthropic.com"}
+]
+maintainers = [
+    {name = "Claude Code", email = "noreply@anthropic.com"}
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Environment :: X11 Applications :: Qt",
+    "Natural Language :: Japanese",
+    "Natural Language :: English",
+]
+keywords = [
+    "astronomy", "physics", "simulation", "3d", "solar-system",
+    "planets", "orbital-mechanics", "kepler", "visualization",
+    "pyqt6", "vispy", "numpy", "scipy", "education", "science"
+]
+requires-python = ">=3.8"
+dependencies = [
+    "vispy>=0.14.0",
+    "PyOpenGL>=3.1.7",
+    "PyQt6>=6.5.0",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "astropy>=5.3.0",
+    "h5py>=3.9.0",
+    "Pillow>=10.0.0",
+    "numba>=0.57.0",
+    "python-dateutil>=2.8.0",
+    "psutil>=5.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+    "isort>=5.12.0",
+]
+test = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+]
+build = [
+    "pyinstaller>=6.0.0",
+    "wheel>=0.41.0",
+    "build>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-username/AstroSim"
+Documentation = "https://github.com/your-username/AstroSim/docs"
+Repository = "https://github.com/your-username/AstroSim.git"
+"Bug Reports" = "https://github.com/your-username/AstroSim/issues"
+Discussions = "https://github.com/your-username/AstroSim/discussions"
+
+[project.scripts]
+astrosim = "src.main:main"
+
+[project.gui-scripts]
+astrosim-gui = "src.main:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["data/*.json", "data/*.csv", "data/*.txt"]
+
+# 開発ツール設定
+
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312', 'py313']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # ディレクトリ
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["src"]
+known_third_party = ["numpy", "scipy", "vispy", "PyQt6", "astropy", "PIL", "psutil"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "vispy.*",
+    "astropy.*",
+    "PIL.*",
+    "psutil.*",
+    "OpenGL.*",
+    "numba.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "gpu: marks tests that require GPU",
+    "gui: marks tests that require GUI",
+]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/build/*",
+    "*/dist/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = [
+    "E203",  # whitespace before ':'
+    "E501",  # line too long (handled by black)
+    "W503",  # line break before binary operator
+]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".eggs",
+    "*.egg-info",
+    ".tox",
+    ".coverage",
+    ".pytest_cache",
+    ".mypy_cache",
+]
+per-file-ignores = [
+    "__init__.py:F401",  # imported but unused
+]

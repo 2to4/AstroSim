@@ -10,18 +10,18 @@ from typing import Optional, Dict, Any
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, 
     QSplitter, QMenuBar, QMenu, QToolBar, QStatusBar,
-    QMessageBox, QFileDialog, QAction, QActionGroup
+    QMessageBox, QFileDialog
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QSize
-from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
+from PyQt6.QtGui import QIcon, QKeySequence, QShortcut, QAction, QActionGroup
 
 from vispy import scene
 from vispy.app import Canvas
 
-from .control_panel import ControlPanel
-from .info_panel import InfoPanel
-from ..visualization.scene_manager import SceneManager
-from ..domain.solar_system import SolarSystem
+from src.ui.control_panel import ControlPanel
+from src.ui.info_panel import InfoPanel
+from src.visualization.scene_manager import SceneManager
+from src.domain.solar_system import SolarSystem
 
 
 class MainWindow(QMainWindow):
@@ -71,7 +71,8 @@ class MainWindow(QMainWindow):
         self.animation_timer = QTimer()
         self.animation_timer.timeout.connect(self._update_animation)
         self.animation_fps = 60  # FPS
-        self.animation_timer.setInterval(1000 // self.animation_fps)
+        self.animation_interval = 1000 // self.animation_fps  # ミリ秒
+        self.animation_timer.setInterval(self.animation_interval)
         
         # 状態管理
         self.is_fullscreen = False
@@ -100,6 +101,24 @@ class MainWindow(QMainWindow):
             # 表示制御
             (QKeySequence("F11"), self._toggle_fullscreen),
             (QKeySequence("F5"), self._refresh_display),
+            (QKeySequence("R"), self._reset_view),
+            (QKeySequence("O"), self._toggle_orbits),
+            (QKeySequence("L"), self._toggle_labels),
+            (QKeySequence("A"), self._toggle_axes),
+            
+            # プリセットビュー
+            (QKeySequence("1"), lambda: self._set_preset_view("top")),
+            (QKeySequence("2"), lambda: self._set_preset_view("side")),
+            (QKeySequence("3"), lambda: self._set_preset_view("front")),
+            (QKeySequence("4"), lambda: self._set_preset_view("perspective")),
+            
+            # 惑星選択
+            (QKeySequence("5"), lambda: self._select_planet_by_index(0)),
+            (QKeySequence("6"), lambda: self._select_planet_by_index(1)),
+            (QKeySequence("7"), lambda: self._select_planet_by_index(2)),
+            (QKeySequence("8"), lambda: self._select_planet_by_index(3)),
+            (QKeySequence("9"), lambda: self._select_planet_by_index(4)),
+            (QKeySequence("Escape"), self._stop_tracking),
             
             # アニメーション制御
             (QKeySequence("Space"), self._toggle_animation),
@@ -261,7 +280,7 @@ class MainWindow(QMainWindow):
             keys='interactive',
             show=True,
             size=(800, 600),
-            bgcolor=(0.05, 0.05, 0.1, 1.0)  # 暗い宇宙背景
+            bgcolor=(0.0, 0.0, 0.0, 1.0)  # 完全な黒い宇宙背景
         )
         
         # PyQt6ウィジェットとして統合
@@ -343,7 +362,7 @@ class MainWindow(QMainWindow):
         
         # 再生/一時停止
         play_pause_action = QAction("再生/一時停止(&P)", self)
-        play_pause_action.setShortcut(QKeySequence.StandardKey.MediaPlay)
+        play_pause_action.setShortcut(QKeySequence("Space"))
         play_pause_action.setStatusTip("シミュレーションの再生/一時停止を切り替えます")
         play_pause_action.triggered.connect(self._toggle_animation)
         sim_menu.addAction(play_pause_action)
@@ -452,11 +471,83 @@ class MainWindow(QMainWindow):
             self.status_bar.showMessage("ビューをリセットしました")
         self.view_reset_requested.emit()
     
+    def _set_preset_view(self, preset: str) -> None:
+        """プリセットビューの設定"""
+        if self.scene_manager and self.scene_manager.camera_controller:
+            self.scene_manager.camera_controller.set_view_preset(preset)
+            preset_names = {
+                "top": "上面ビュー",
+                "side": "側面ビュー", 
+                "front": "正面ビュー",
+                "perspective": "透視図ビュー"
+            }
+            preset_name = preset_names.get(preset, preset)
+            self.status_bar.showMessage(f"{preset_name}に切り替えました")
+    
+    def _toggle_orbits(self) -> None:
+        """軌道線表示切り替え"""
+        if self.scene_manager and self.scene_manager.renderer:
+            current_state = self.scene_manager.renderer.show_orbits
+            self.scene_manager.renderer.set_orbit_visibility(not current_state)
+            state_text = "OFF" if current_state else "ON"
+            self.status_bar.showMessage(f"軌道線表示: {state_text}")
+    
+    def _toggle_labels(self) -> None:
+        """ラベル表示切り替え"""
+        if self.scene_manager and self.scene_manager.renderer:
+            current_state = self.scene_manager.renderer.show_labels
+            self.scene_manager.renderer.set_label_visibility(not current_state)
+            state_text = "OFF" if current_state else "ON"
+            self.status_bar.showMessage(f"ラベル表示: {state_text}")
+    
+    def _toggle_axes(self) -> None:
+        """座標軸表示切り替え"""
+        if self.scene_manager and self.scene_manager.renderer:
+            current_state = self.scene_manager.renderer.show_axes
+            self.scene_manager.renderer.set_axes_visibility(not current_state)
+            state_text = "OFF" if current_state else "ON"
+            self.status_bar.showMessage(f"座標軸表示: {state_text}")
+    
+    def _select_planet_by_index(self, index: int) -> None:
+        """インデックスによる惑星選択"""
+        if self.scene_manager and self.solar_system:
+            planets = self.solar_system.get_planets()
+            if 0 <= index < len(planets):
+                planet = planets[index]
+                planet_name = planet.name
+                self.scene_manager.select_planet(planet_name)
+                self._focus_on_planet(planet_name)
+                self.status_bar.showMessage(f"{planet_name}を選択しました")
+    
+    def _stop_tracking(self) -> None:
+        """追跡停止"""
+        if self.scene_manager and self.scene_manager.camera_controller:
+            self.scene_manager.camera_controller.stop_tracking()
+            self.status_bar.showMessage("追跡を停止しました")
+    
     def _on_time_scale_changed(self, scale: float) -> None:
         """時間倍率変更処理"""
+        # TimeManagerに時間倍率を設定
+        if self.time_manager:
+            self.time_manager.set_time_scale(scale)
+        
+        # SceneManagerにアニメーション速度を設定
         if self.scene_manager:
             self.scene_manager.set_animation_speed(scale)
-            self.status_bar.showMessage(f"時間倍率: x{scale:.1f}")
+        
+        # ステータスバーに表示
+        if hasattr(self, 'status_bar') and self.status_bar:
+            if scale >= 1.0:
+                if scale >= 100:
+                    scale_text = f"x{scale:.0f}"
+                elif scale >= 10:
+                    scale_text = f"x{scale:.1f}"
+                else:
+                    scale_text = f"x{scale:.2f}"
+            else:
+                scale_text = f"x{scale:.3f}"
+            self.status_bar.showMessage(f"時間倍率: {scale_text}")
+        
         self.time_scale_changed.emit(scale)
     
     def _focus_on_planet(self, planet_name: str) -> None:

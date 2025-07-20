@@ -33,14 +33,14 @@ class CameraController:
             elevation=30.0,
             azimuth=30.0,
             fov=60.0,
-            distance=5.0,  # 5AU相当
+            distance=80.0,  # 外惑星も含めた太陽系全体が見える距離
             up='z'
         )
         self.view.camera = self.camera
         
         # カメラの制限設定
         self.min_distance = 0.1    # 最小距離（AU）
-        self.max_distance = 50.0   # 最大距離（AU）
+        self.max_distance = 100.0   # 最大距離（AU）
         self.min_elevation = -89.0 # 最小仰角
         self.max_elevation = 89.0  # 最大仰角
         
@@ -50,7 +50,7 @@ class CameraController:
         self.pan_sensitivity = 0.01
         
         # 初期位置を保存
-        self.default_distance = 5.0
+        self.default_distance = 80.0  # 外惑星も含めた太陽系全体が見える距離
         self.default_elevation = 30.0
         self.default_azimuth = 30.0
         self.default_center = np.array([0.0, 0.0, 0.0])

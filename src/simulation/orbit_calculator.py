@@ -8,8 +8,8 @@
 import numpy as np
 import hashlib
 from typing import Tuple, Dict, Optional, List
-from ..domain.orbital_elements import OrbitalElements
-from ..domain.celestial_body import CelestialBody
+from src.domain.orbital_elements import OrbitalElements
+from src.domain.celestial_body import CelestialBody
 
 
 class OrbitCalculator:
@@ -137,8 +137,8 @@ class OrbitCalculator:
             f"{julian_date:.6f}"
         )
         
-        # MD5ハッシュでキーを短縮
-        return hashlib.md5(elements_str.encode()).hexdigest()
+        # MD5ハッシュでキーを短縮（セキュリティ用途ではない）
+        return hashlib.md5(elements_str.encode(), usedforsecurity=False).hexdigest()
     
     def _get_from_cache(self, cache_key: str, julian_date: float) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         """
