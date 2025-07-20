@@ -216,6 +216,9 @@ def wrap_exception(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
+        except AstroSimException:
+            # AstroSim例外はそのまま通す
+            raise
         except ValueError as e:
             raise DataValidationError(f"値の検証エラー: {e}", cause=e)
         except FileNotFoundError as e:
@@ -307,15 +310,16 @@ def get_error_level(exception: Exception) -> str:
     Returns:
         エラーレベル
     """
+    # より具体的な例外から先にチェック（継承関係を考慮）
+    warning_exceptions = (PerformanceError, ConfigurationError)
     critical_errors = (DependencyError, SystemError, GPUError)
     error_exceptions = (SimulationError, VisualizationError, DataError, ValueError, TypeError, RuntimeError)
-    warning_exceptions = (PerformanceError, ConfigurationError)
     
-    if isinstance(exception, critical_errors):
+    if isinstance(exception, warning_exceptions):
+        return ErrorLevel.WARNING
+    elif isinstance(exception, critical_errors):
         return ErrorLevel.CRITICAL
     elif isinstance(exception, error_exceptions):
         return ErrorLevel.ERROR
-    elif isinstance(exception, warning_exceptions):
-        return ErrorLevel.WARNING
     else:
         return ErrorLevel.INFO

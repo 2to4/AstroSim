@@ -156,18 +156,20 @@ class ConfigManager:
     
     def _load_config(self) -> None:
         """設定ファイルを読み込み"""
+        import copy
+        
         try:
             if self.config_path.exists():
                 with open(self.config_path, 'r', encoding='utf-8') as file:
                     user_config = json.load(file)
                 
                 # デフォルト設定にユーザー設定をマージ
-                self._config = self._merge_configs(self._default_config, user_config)
+                self._config = self._merge_configs(copy.deepcopy(self._default_config), user_config)
                 
                 self.logger.info(f"設定ファイルを読み込みました: {self.config_path}")
             else:
                 # デフォルト設定を使用
-                self._config = self._default_config.copy()
+                self._config = copy.deepcopy(self._default_config)
                 self.logger.info("デフォルト設定を使用します")
                 
                 # デフォルト設定ファイルを作成
@@ -175,10 +177,10 @@ class ConfigManager:
                 
         except json.JSONDecodeError as e:
             self.logger.error(f"設定ファイルの解析エラー: {e}")
-            self._config = self._default_config.copy()
+            self._config = copy.deepcopy(self._default_config)
         except Exception as e:
             self.logger.error(f"設定読み込みエラー: {e}")
-            self._config = self._default_config.copy()
+            self._config = copy.deepcopy(self._default_config)
     
     def _merge_configs(self, default: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, Any]:
         """設定をマージ（ユーザー設定を優先）"""
@@ -316,14 +318,16 @@ class ConfigManager:
         Args:
             section: リセットするセクション（Noneの場合は全体）
         """
+        import copy
+        
         if section is None:
             # 全体をリセット
-            self._config = self._default_config.copy()
+            self._config = copy.deepcopy(self._default_config)
             self.logger.info("全設定をデフォルトにリセットしました")
         else:
             # 特定のセクションのみリセット
             if section in self._default_config:
-                self._config[section] = self._default_config[section].copy()
+                self._config[section] = copy.deepcopy(self._default_config[section])
                 self.logger.info(f"設定セクション '{section}' をデフォルトにリセットしました")
             else:
                 self.logger.warning(f"設定セクション '{section}' が見つかりません")
