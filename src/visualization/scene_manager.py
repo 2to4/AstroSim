@@ -24,17 +24,19 @@ class SceneManager:
     ユーザーインタラクションの処理などを行います。
     """
     
-    def __init__(self, canvas: scene.SceneCanvas):
+    def __init__(self, canvas: scene.SceneCanvas, config_manager=None):
         """
         シーンマネージャーの初期化
         
         Args:
             canvas: Vispyのシーンキャンバス
+            config_manager: 設定管理オブジェクト（オプション）
         """
         self.canvas = canvas
+        self.config_manager = config_manager
         
         # コンポーネントの初期化
-        self.renderer = Renderer3D(canvas)
+        self.renderer = Renderer3D(canvas, config_manager)
         self.camera_controller = CameraController(self.renderer.view)
         
         # 太陽系データ

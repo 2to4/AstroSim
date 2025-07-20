@@ -1,0 +1,93 @@
+{
+  "_metadata": {
+    "created": "2025-07-20T16:51:46.467999",
+    "version": "1.0.0",
+    "description": "AstroSim アプリケーション設定ファイル"
+  },
+  "application": {
+    "version": "1.0.0",
+    "language": "ja",
+    "theme": "default",
+    "auto_save": true,
+    "backup_count": 5
+  },
+  "window": {
+    "width": 1600,
+    "height": 942,
+    "maximized": false,
+    "fullscreen": false,
+    "remember_position": true,
+    "x": 100,
+    "y": 25
+  },
+  "simulation": {
+    "default_time_scale": 1.0,
+    "auto_play": false,
+    "fps": 60,
+    "physics_precision": "high",
+    "integration_method": "rk4"
+  },
+  "display": {
+    "show_orbits": true,
+    "show_labels": true,
+    "show_axes": false,
+    "show_grid": false,
+    "show_trails": false,
+    "planet_scale": 10.0,
+    "distance_scale": 1.0,
+    "background_color": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "anti_aliasing": true,
+    "vsync": true
+  },
+  "camera": {
+    "default_distance": 80.0,
+    "default_elevation": 30.0,
+    "default_azimuth": 30.0,
+    "movement_speed": 1.0,
+    "rotation_speed": 1.0,
+    "zoom_speed": 1.1,
+    "smooth_movement": true
+  },
+  "data": {
+    "default_data_path": "src/data/planet_data.json",
+    "auto_reload": false,
+    "cache_enabled": true,
+    "cache_size_mb": 100
+  },
+  "performance": {
+    "max_trail_points": 1000,
+    "orbit_resolution": 360,
+    "adaptive_quality": true,
+    "gpu_acceleration": true,
+    "multi_threading": true
+  },
+  "ui": {
+    "control_panel_width": 300,
+    "info_panel_height": 200,
+    "font_size": 10,
+    "icon_size": 16,
+    "toolbar_visible": true,
+    "status_bar_visible": true
+  },
+  "shortcuts": {
+    "play_pause": "Space",
+    "reset_view": "R",
+    "toggle_orbits": "O",
+    "toggle_labels": "L",
+    "fullscreen": "F11",
+    "screenshot": "F12",
+    "quit": "Ctrl+Q"
+  },
+  "logging": {
+    "level": "INFO",
+    "log_to_file": true,
+    "log_file_path": "logs/astrosim.log",
+    "max_log_size_mb": 10,
+    "backup_count": 3
+  }
+}

@@ -9,7 +9,9 @@
       "Bash(ls:*)",
       "Bash(git push:*)",
       "Bash(mv:*)",
-      "Bash(pyinstaller:*)"
+      "Bash(pyinstaller:*)",
+      "Bash(screencapture:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

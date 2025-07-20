@@ -275,12 +275,21 @@ class MainWindow(QMainWindow):
     
     def _create_3d_viewport(self) -> None:
         """3Dビューポートの作成"""
+        # 設定ファイルから背景色を取得
+        bg_color = (0.0, 0.0, 0.0, 1.0)  # デフォルト
+        if self.config_manager:
+            try:
+                bg_list = self.config_manager.get('display.background_color', [0.0, 0.0, 0.0, 1.0])
+                bg_color = tuple(bg_list)
+            except Exception:
+                pass
+        
         # Vispyキャンバスを作成
         self.canvas = scene.SceneCanvas(
             keys='interactive',
             show=True,
             size=(800, 600),
-            bgcolor=(0.0, 0.0, 0.0, 1.0)  # 完全な黒い宇宙背景
+            bgcolor=bg_color
         )
         
         # PyQt6ウィジェットとして統合
@@ -288,7 +297,7 @@ class MainWindow(QMainWindow):
         self.main_splitter.addWidget(canvas_widget)
         
         # シーンマネージャーの初期化
-        self.scene_manager = SceneManager(self.canvas)
+        self.scene_manager = SceneManager(self.canvas, self.config_manager)
     
     def _create_side_panels(self) -> None:
         """サイドパネルの作成"""

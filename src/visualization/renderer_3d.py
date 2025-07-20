@@ -9,6 +9,7 @@ import numpy as np
 from typing import Dict, Optional, List, Tuple, Any
 from vispy import scene, color
 from vispy.visuals.transforms import STTransform
+from vispy import gloo
 
 from src.domain.planet import Planet
 from src.domain.sun import Sun
@@ -23,15 +24,17 @@ class Renderer3D:
     惑星の描画、軌道表示、カメラ制御などを提供します。
     """
     
-    def __init__(self, canvas: scene.SceneCanvas):
+    def __init__(self, canvas: scene.SceneCanvas, config_manager=None):
         """
         3Dレンダラーの初期化
         
         Args:
             canvas: Vispyのシーンキャンバス
+            config_manager: 設定管理オブジェクト（オプション）
         """
         self.canvas = canvas
         self.view = canvas.central_widget.add_view()
+        self.config_manager = config_manager
         
         # シーン設定
         self._setup_camera()
@@ -68,11 +71,17 @@ class Renderer3D:
             'low': 8        # 低詳細: 8分割
         }
         
-        # 背景設定（黒い宇宙）
-        self.canvas.bgcolor = (0.0, 0.0, 0.0, 1.0)
+        # 背景色設定（設定ファイルから読み込み）
+        self._setup_background()
         
         # 座標軸を追加
         self._setup_axes()
+        
+        # 初期化完了後に背景色を再確認・再設定
+        self._force_background_update()
+        
+        # カスタム背景レンダリングの設定
+        self._setup_custom_background()
     
     def _setup_camera(self) -> None:
         """カメラの初期設定"""
@@ -110,6 +119,129 @@ class Renderer3D:
             # ライティングが利用できない場合はスキップ
             self.ambient_light = None
             self.directional_light = None
+    
+    def _setup_background(self) -> None:
+        """背景色の設定"""
+        bg_color = [0.0, 0.0, 0.0, 1.0]  # デフォルト黒色
+        
+        if self.config_manager:
+            try:
+                # 設定ファイルから背景色を取得
+                bg_color = self.config_manager.get('display.background_color', [0.0, 0.0, 0.0, 1.0])
+            except Exception:
+                pass
+        
+        # 複数の方法で背景色を設定
+        try:
+            # 1. キャンバスの背景色設定
+            self.canvas.bgcolor = tuple(bg_color)
+            
+            # 2. OpenGLクリアカラーの直接設定
+            from vispy import gloo
+            if hasattr(gloo, 'set_clear_color'):
+                gloo.set_clear_color(bg_color[0], bg_color[1], bg_color[2], bg_color[3])
+            
+            # 3. ビューポートの背景色設定
+            if hasattr(self.view.scene, 'bgcolor'):
+                self.view.scene.bgcolor = tuple(bg_color)
+                
+            # 4. 強制的な再描画
+            self.canvas.update()
+            
+        except Exception as e:
+            # 設定に失敗した場合でもエラーで止まらない
+            print(f"Background color setup warning: {e}")
+            self.canvas.bgcolor = (0.0, 0.0, 0.0, 1.0)
+    
+    def _force_background_update(self) -> None:
+        """背景色の強制的な更新（OpenGLコンテキスト作成後）"""
+        try:
+            # 少し遅延させてOpenGLコンテキストが確実に作成されてから実行
+            from PyQt6.QtCore import QTimer
+            
+            def delayed_background_update():
+                try:
+                    # 現在の背景色を取得
+                    if self.config_manager:
+                        bg_color = self.config_manager.get('display.background_color', [0.0, 0.0, 0.0, 1.0])
+                    else:
+                        bg_color = [0.0, 0.0, 0.0, 1.0]
+                    
+                    # Vispyの内部でOpenGLクリアカラーを設定
+                    self.canvas.bgcolor = tuple(bg_color)
+                    
+                    # 追加の設定方法を試行
+                    try:
+                        from vispy.gloo import gl
+                        gl.glClearColor(bg_color[0], bg_color[1], bg_color[2], bg_color[3])
+                    except:
+                        pass
+                    
+                    # 強制再描画
+                    self.canvas.update()
+                    print(f"Background color force updated to: {bg_color}")
+                    
+                except Exception as e:
+                    print(f"Force background update failed: {e}")
+            
+            # 500ms後に実行
+            QTimer.singleShot(500, delayed_background_update)
+            
+        except Exception as e:
+            print(f"Force background update setup failed: {e}")
+    
+    def _setup_custom_background(self) -> None:
+        """カスタム背景レンダリングの設定"""
+        try:
+            # 設定ファイルから背景色を取得
+            bg_color = [0.0, 0.0, 0.0, 1.0]
+            if self.config_manager:
+                bg_color = self.config_manager.get('display.background_color', [0.0, 0.0, 0.0, 1.0])
+            
+            # カスタム背景ビジュアルを作成
+            vertex_shader = """
+            attribute vec2 a_position;
+            void main() {
+                gl_Position = vec4(a_position, 0.0, 1.0);
+            }
+            """
+            
+            fragment_shader = f"""
+            void main() {{
+                gl_FragColor = vec4({bg_color[0]}, {bg_color[1]}, {bg_color[2]}, {bg_color[3]});
+            }}
+            """
+            
+            # フルスクリーン四角形のビジュアルを作成
+            from vispy.visuals import Visual
+            
+            class CustomBackgroundVisual(Visual):
+                def __init__(self):
+                    Visual.__init__(self)
+                    self.program = gloo.Program(vertex_shader, fragment_shader)
+                    
+                    # フルスクリーン四角形の頂点
+                    vertices = np.array([
+                        [-1, -1], [1, -1], [-1, 1], [1, 1]
+                    ], dtype=np.float32)
+                    
+                    self.program['a_position'] = gloo.VertexBuffer(vertices)
+                
+                def _prepare_draw(self, view):
+                    # デプステストを無効にして背景として描画
+                    gloo.set_state(depth_test=False)
+                
+                def _draw(self, view):
+                    self.program.draw('triangle_strip')
+            
+            # 背景ビジュアルをシーンに追加（最初に描画されるように）
+            self.background_visual = CustomBackgroundVisual()
+            # 注意: 実際にはVispy sceneの描画順序制御が必要
+            
+            print(f"Custom background visual created with color: {bg_color}")
+            
+        except Exception as e:
+            print(f"Custom background setup failed: {e}")
     
     def _setup_axes(self) -> None:
         """座標軸の設定"""

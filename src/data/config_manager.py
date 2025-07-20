@@ -29,8 +29,9 @@ class ConfigManager:
         """
         # 設定ファイルパスの設定
         if config_path is None:
-            # ユーザーホームディレクトリの設定フォルダを使用
-            config_dir = Path.home() / ".astrosim"
+            # プロジェクトのdataディレクトリを使用
+            project_root = Path(__file__).parent.parent.parent
+            config_dir = project_root / "data"
             config_dir.mkdir(exist_ok=True)
             self.config_path = config_dir / "config.json"
         else:

@@ -1,0 +1,186 @@
+{
+  "sun": {
+    "name": "太陽",
+    "mass": 1.989e+30,
+    "radius": 695700.0,
+    "temperature": 5778.0,
+    "luminosity": 3.828e+26
+  },
+  "planets": {
+    "水星": {
+      "name": "水星",
+      "mass": 3.301e+23,
+      "radius": 2439.7,
+      "color": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "rotation_period": 1407.6,
+      "axial_tilt": 0.034,
+      "orbital_elements": {
+        "semi_major_axis": 0.387098,
+        "eccentricity": 0.20563,
+        "inclination": 7.005,
+        "longitude_of_ascending_node": 48.331,
+        "argument_of_perihelion": 29.124,
+        "mean_anomaly_at_epoch": 174.796,
+        "epoch": 2451545.0
+      }
+    },
+    "金星": {
+      "name": "金星",
+      "mass": 4.867e+24,
+      "radius": 6051.8,
+      "color": [
+        1.0,
+        0.8,
+        0.4
+      ],
+      "rotation_period": -5832.5,
+      "axial_tilt": 177.4,
+      "orbital_elements": {
+        "semi_major_axis": 0.723332,
+        "eccentricity": 0.006772,
+        "inclination": 3.39458,
+        "longitude_of_ascending_node": 76.68,
+        "argument_of_perihelion": 54.884,
+        "mean_anomaly_at_epoch": 50.115,
+        "epoch": 2451545.0
+      }
+    },
+    "地球": {
+      "name": "地球",
+      "mass": 5.972e+24,
+      "radius": 6371.0,
+      "color": [
+        0.3,
+        0.7,
+        1.0
+      ],
+      "rotation_period": 23.9345,
+      "axial_tilt": 23.44,
+      "orbital_elements": {
+        "semi_major_axis": 1.00000261,
+        "eccentricity": 0.01671123,
+        "inclination": 1.531e-05,
+        "longitude_of_ascending_node": -11.26064,
+        "argument_of_perihelion": 102.93768,
+        "mean_anomaly_at_epoch": 100.46457,
+        "epoch": 2451545.0
+      }
+    },
+    "火星": {
+      "name": "火星",
+      "mass": 6.417e+23,
+      "radius": 3389.5,
+      "color": [
+        0.8,
+        0.3,
+        0.1
+      ],
+      "rotation_period": 24.6229,
+      "axial_tilt": 25.19,
+      "orbital_elements": {
+        "semi_major_axis": 1.52371034,
+        "eccentricity": 0.0933941,
+        "inclination": 1.84969142,
+        "longitude_of_ascending_node": 49.55953891,
+        "argument_of_perihelion": 286.50210865,
+        "mean_anomaly_at_epoch": 19.387,
+        "epoch": 2451545.0
+      }
+    },
+    "木星": {
+      "name": "木星",
+      "mass": 1.898e+27,
+      "radius": 69911.0,
+      "color": [
+        0.9,
+        0.7,
+        0.4
+      ],
+      "rotation_period": 9.9259,
+      "axial_tilt": 3.13,
+      "orbital_elements": {
+        "semi_major_axis": 5.202887,
+        "eccentricity": 0.04838624,
+        "inclination": 1.30439695,
+        "longitude_of_ascending_node": 100.47390909,
+        "argument_of_perihelion": 273.8674084,
+        "mean_anomaly_at_epoch": 20.02,
+        "epoch": 2451545.0
+      }
+    },
+    "土星": {
+      "name": "土星",
+      "mass": 5.683e+26,
+      "radius": 58232.0,
+      "color": [
+        0.9,
+        0.9,
+        0.6
+      ],
+      "rotation_period": 10.656,
+      "axial_tilt": 26.73,
+      "orbital_elements": {
+        "semi_major_axis": 9.53667594,
+        "eccentricity": 0.05386179,
+        "inclination": 2.48599187,
+        "longitude_of_ascending_node": 113.66242448,
+        "argument_of_perihelion": 339.391647,
+        "mean_anomaly_at_epoch": 317.02,
+        "epoch": 2451545.0
+      }
+    },
+    "天王星": {
+      "name": "天王星",
+      "mass": 8.681e+25,
+      "radius": 25362.0,
+      "color": [
+        0.4,
+        0.8,
+        0.9
+      ],
+      "rotation_period": -17.2417,
+      "axial_tilt": 97.77,
+      "orbital_elements": {
+        "semi_major_axis": 19.18916464,
+        "eccentricity": 0.04725744,
+        "inclination": 0.77263783,
+        "longitude_of_ascending_node": 74.01692503,
+        "argument_of_perihelion": 96.99856,
+        "mean_anomaly_at_epoch": 142.238,
+        "epoch": 2451545.0
+      }
+    },
+    "海王星": {
+      "name": "海王星",
+      "mass": 1.024e+26,
+      "radius": 24622.0,
+      "color": [
+        0.2,
+        0.3,
+        0.8
+      ],
+      "rotation_period": 16.1187,
+      "axial_tilt": 28.32,
+      "orbital_elements": {
+        "semi_major_axis": 30.06992276,
+        "eccentricity": 0.00859048,
+        "inclination": 1.77004347,
+        "longitude_of_ascending_node": 131.78422574,
+        "argument_of_perihelion": 276.3364,
+        "mean_anomaly_at_epoch": 260.813,
+        "epoch": 2451545.0
+      }
+    }
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "description": "太陽系惑星データ（J2000.0エポック）",
+    "created": "2025-07-20T16:17:53.581361",
+    "source": "NASA JPL惑星および月の軌道要素",
+    "coordinate_system": "J2000.0黄道座標系"
+  }
+}

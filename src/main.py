@@ -9,9 +9,26 @@ PyQt6 + Vispy統合によるインタラクティブ3Dアプリケーション�
 
 import sys
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 import traceback
+
+# GUI環境のチェックと設定
+def _check_and_setup_gui_environment():
+    """GUI環境をチェックし、適切に設定する"""
+    # macOSでSSH経由の場合など、GUI表示ができない環境への対応
+    if not os.environ.get('DISPLAY') and sys.platform == 'darwin':
+        # macOSでDISPLAYが設定されていない場合はcocoaを試す
+        if 'QT_QPA_PLATFORM' not in os.environ:
+            os.environ['QT_QPA_PLATFORM'] = 'cocoa'
+    elif not os.environ.get('DISPLAY') and sys.platform.startswith('linux'):
+        # LinuxでDISPLAYが設定されていない場合はオフスクリーン
+        if 'QT_QPA_PLATFORM' not in os.environ:
+            os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+            print("警告: GUI表示環境が検出されません。オフスクリーンモードで実行します。")
+
+_check_and_setup_gui_environment()
 
 # PyQt6インポート
 try:
@@ -27,7 +44,19 @@ except ImportError as e:
 try:
     import vispy
     from vispy import app as vispy_app
-    vispy.use('pyqt6')  # PyQt6バックエンドを使用
+    
+    # GUI環境に応じてVispyバックエンドを設定
+    try:
+        vispy.use('pyqt6')  # PyQt6バックエンドを使用
+    except Exception as vispy_error:
+        print(f"Vispy PyQt6バックエンド設定エラー: {vispy_error}")
+        # フォールバック：利用可能なバックエンドを自動選択
+        try:
+            vispy.use('gl')  # OpenGLバックエンド
+        except:
+            vispy.use('null')  # ヌルバックエンド（テスト用）
+            print("警告: Vispyはヌルバックエンドで動作します。3D表示は利用できません。")
+            
 except ImportError as e:
     print("Vispyが見つかりません。以下のコマンドでインストールしてください:")
     print("pip install vispy")
@@ -158,6 +187,11 @@ class AstroSimApplication:
     def _initialize_qt_application(self) -> bool:
         """Qt アプリケーションの初期化"""
         try:
+            # GUI環境チェック
+            platform = os.environ.get('QT_QPA_PLATFORM', '')
+            if platform == 'offscreen':
+                self.logger.warning("オフスクリーンモードで実行中。GUIは表示されません。")
+            
             self.app = QApplication(sys.argv)
             
             # アプリケーション情報設定
@@ -169,6 +203,26 @@ class AstroSimApplication:
             # Qt6では以下の属性は削除されました：
             # - AA_EnableHighDpiScaling（自動的に有効）
             # - AA_UseHighDpiPixmaps（自動的に有効）
+            
+            # GUI環境のテスト
+            try:
+                # ダミーウィジェットを作成してGUI環境をテスト
+                from PyQt6.QtWidgets import QWidget
+                test_widget = QWidget()
+                test_widget.close()
+                test_widget.deleteLater()
+            except Exception as gui_error:
+                self.logger.warning(f"GUI環境のテストに失敗: {gui_error}")
+                if platform != 'offscreen':
+                    # オフスクリーンモードに自動切替
+                    self.logger.info("オフスクリーンモードに切り替えます...")
+                    os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+                    # アプリケーションを再作成
+                    self.app.quit()
+                    self.app = QApplication(sys.argv)
+                    self.app.setApplicationName("AstroSim")
+                    self.app.setApplicationVersion("1.0.0")
+                    self.app.setOrganizationName("AstroSim Development")
             
             self.logger.info("Qt アプリケーション初期化完了")
             return True
@@ -366,8 +420,20 @@ class AstroSimApplication:
                 self.logger.error("アプリケーションが初期化されていません")
                 return 1
             
-            # メインウィンドウを表示
-            self.main_window.show()
+            # GUI環境チェック
+            platform = os.environ.get('QT_QPA_PLATFORM', '')
+            if platform == 'offscreen':
+                self.logger.info("オフスクリーンモードでの実行 - GUIウィンドウは表示されません")
+                # オフスクリーンモードでは短時間でテスト実行
+                from PyQt6.QtCore import QTimer
+                exit_timer = QTimer()
+                exit_timer.timeout.connect(self.app.quit)
+                exit_timer.start(5000)  # 5秒後に終了
+                self.logger.info("5秒後に自動終了します（テストモード）")
+            else:
+                # 通常のGUIモードでメインウィンドウを表示
+                self.logger.info("メインウィンドウを表示します")
+                self.main_window.show()
             
             # シミュレーション開始
             self.start_simulation()
@@ -375,7 +441,9 @@ class AstroSimApplication:
             self.logger.info("アプリケーション開始")
             
             # メインループ実行
-            return self.app.exec()
+            exit_code = self.app.exec()
+            self.logger.info(f"アプリケーション終了（コード: {exit_code}）")
+            return exit_code
             
         except Exception as e:
             self.logger.error(f"アプリケーション実行エラー: {e}")
