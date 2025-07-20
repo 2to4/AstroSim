@@ -85,19 +85,19 @@ class ConfigManager:
             "display": {
                 "show_orbits": True,
                 "show_labels": True,
-                "show_axes": True,
+                "show_axes": False,
                 "show_grid": False,
                 "show_trails": False,
                 "planet_scale": 10.0,
                 "distance_scale": 1.0,
-                "background_color": [0.05, 0.05, 0.1, 1.0],
+                "background_color": [0.0, 0.0, 0.0, 1.0],  # 完全な黒
                 "anti_aliasing": True,
                 "vsync": True
             },
             
             # カメラ設定
             "camera": {
-                "default_distance": 5.0,
+                "default_distance": 80.0,  # 外惑星も含めた太陽系全体が見える距離
                 "default_elevation": 30.0,
                 "default_azimuth": 30.0,
                 "movement_speed": 1.0,
@@ -108,7 +108,7 @@ class ConfigManager:
             
             # データ設定
             "data": {
-                "default_data_path": "data/planet_data.json",
+                "default_data_path": "src/data/planet_data.json",
                 "auto_reload": False,
                 "cache_enabled": True,
                 "cache_size_mb": 100

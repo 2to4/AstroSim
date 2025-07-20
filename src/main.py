@@ -37,13 +37,13 @@ except ImportError as e:
 sys.path.insert(0, str(Path(__file__).parent))
 
 try:
-    from data.data_loader import DataLoader
-    from data.config_manager import ConfigManager
-    from simulation.time_manager import TimeManager
-    from simulation.physics_engine import PhysicsEngine
-    from ui.main_window import MainWindow
-    from visualization.renderer_3d import Renderer3D
-    from domain.solar_system import SolarSystem
+    from src.data.data_loader import DataLoader
+    from src.data.config_manager import ConfigManager
+    from src.simulation.time_manager import TimeManager
+    from src.simulation.physics_engine import PhysicsEngine
+    from src.ui.main_window import MainWindow
+    from src.visualization.renderer_3d import Renderer3D
+    from src.domain.solar_system import SolarSystem
 except ImportError as e:
     print(f"モジュールインポートエラー: {e}")
     print("プロジェクト構造を確認してください。")
@@ -165,9 +165,10 @@ class AstroSimApplication:
             self.app.setApplicationVersion("1.0.0")
             self.app.setOrganizationName("AstroSim Development")
             
-            # ハイDPI対応
-            self.app.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling, True)
-            self.app.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
+            # ハイDPI対応（Qt6では自動的に有効化されるため、設定不要）
+            # Qt6では以下の属性は削除されました：
+            # - AA_EnableHighDpiScaling（自動的に有効）
+            # - AA_UseHighDpiPixmaps（自動的に有効）
             
             self.logger.info("Qt アプリケーション初期化完了")
             return True

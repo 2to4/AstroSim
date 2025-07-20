@@ -262,7 +262,8 @@ class ControlPanel(QWidget):
         grid_layout = QGridLayout()
         
         self.planet_buttons = {}
-        for i, planet_name in enumerate(self.planet_names):\n            btn = QPushButton(planet_name)
+        for i, planet_name in enumerate(self.planet_names):
+            btn = QPushButton(planet_name)
             btn.setMinimumHeight(30)
             btn.setCheckable(True)
             btn.clicked.connect(lambda checked, name=planet_name: self._on_planet_selected(name))
@@ -325,19 +326,31 @@ class ControlPanel(QWidget):
     def _on_time_scale_changed(self, value: int) -> None:
         """時間倍率スライダー変更処理"""
         # スライダー値を倍率に変換（対数スケール）
-        if value >= 0:
-            scale = 10 ** (value / 10.0)
-        else:
-            scale = 10 ** (value / 10.0)
+        # -20から50の範囲を0.01倍から1000倍にマッピング
+        scale = 10 ** (value / 10.0)
         
         self.current_time_scale = scale
-        self.time_scale_display.setText(f"x{scale:.1f}")
+        
+        # 表示フォーマットを改善
+        if scale >= 1.0:
+            if scale >= 100:
+                self.time_scale_display.setText(f"x{scale:.0f}")
+            elif scale >= 10:
+                self.time_scale_display.setText(f"x{scale:.1f}")
+            else:
+                self.time_scale_display.setText(f"x{scale:.2f}")
+        else:
+            self.time_scale_display.setText(f"x{scale:.3f}")
+        
         self.time_scale_changed.emit(scale)
     
     def _set_time_scale_preset(self, scale: float) -> None:
         """時間倍率プリセット設定"""
-        # スライダー値に変換
-        slider_value = int(10 * (scale.bit_length() - 1))  # 簡易的な変換
+        # スライダー値に変換（対数スケールの逆変換）
+        import math
+        slider_value = int(10 * math.log10(scale))
+        # 範囲チェック
+        slider_value = max(-20, min(50, slider_value))
         self.time_scale_slider.setValue(slider_value)
     
     def _on_planet_scale_changed(self, value: int) -> None:

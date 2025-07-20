@@ -7,9 +7,9 @@
 
 import numpy as np
 from typing import Dict, List, Optional, Any
-from .celestial_body import CelestialBody
-from .sun import Sun
-from .planet import Planet
+from src.domain.celestial_body import CelestialBody
+from src.domain.sun import Sun
+from src.domain.planet import Planet
 
 
 class SolarSystem:

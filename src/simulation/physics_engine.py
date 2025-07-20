@@ -7,7 +7,7 @@
 
 import numpy as np
 from typing import List, Tuple, Optional
-from ..domain.celestial_body import CelestialBody
+from src.domain.celestial_body import CelestialBody
 
 
 class PhysicsEngine:

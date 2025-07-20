@@ -7,8 +7,8 @@
 
 import numpy as np
 from typing import Dict, Any, Optional, Tuple
-from .celestial_body import CelestialBody
-from .orbital_elements import OrbitalElements
+from src.domain.celestial_body import CelestialBody
+from src.domain.orbital_elements import OrbitalElements
 
 
 class Planet(CelestialBody):

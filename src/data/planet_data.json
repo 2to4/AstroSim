@@ -179,7 +179,7 @@
   "metadata": {
     "version": "1.0.0",
     "description": "太陽系惑星データ（J2000.0エポック）",
-    "created": "2025-07-20T12:10:13.455956",
+    "created": "2025-07-20T12:17:48.017295",
     "source": "NASA JPL惑星および月の軌道要素",
     "coordinate_system": "J2000.0黄道座標系"
   }

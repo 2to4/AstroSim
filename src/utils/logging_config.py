@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, Callable
 from datetime import datetime
 
-from .exceptions import AstroSimException, get_error_level, ErrorLevel
+from src.utils.exceptions import AstroSimException, get_error_level, ErrorLevel
 
 
 class AstroSimLogger:

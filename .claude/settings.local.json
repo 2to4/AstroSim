@@ -8,7 +8,8 @@
       "Bash(touch:*)",
       "Bash(ls:*)",
       "Bash(git push:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(pyinstaller:*)"
     ],
     "deny": []
   }

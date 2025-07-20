@@ -11,10 +11,10 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 from datetime import datetime
 
-from ..domain.orbital_elements import OrbitalElements
-from ..domain.planet import Planet
-from ..domain.sun import Sun
-from ..domain.solar_system import SolarSystem
+from src.domain.orbital_elements import OrbitalElements
+from src.domain.planet import Planet
+from src.domain.sun import Sun
+from src.domain.solar_system import SolarSystem
 
 
 class PlanetRepository:

@@ -9,11 +9,11 @@ import numpy as np
 from typing import Dict, List, Optional, Any, Tuple
 from vispy import scene, color
 
-from ..domain.solar_system import SolarSystem
-from ..domain.planet import Planet
-from ..domain.sun import Sun
-from .renderer_3d import Renderer3D
-from .camera_controller import CameraController
+from src.domain.solar_system import SolarSystem
+from src.domain.planet import Planet
+from src.domain.sun import Sun
+from src.visualization.renderer_3d import Renderer3D
+from src.visualization.camera_controller import CameraController
 
 
 class SceneManager:

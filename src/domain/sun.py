@@ -7,7 +7,7 @@
 
 import numpy as np
 from typing import Dict, Any
-from .celestial_body import CelestialBody
+from src.domain.celestial_body import CelestialBody
 
 
 class Sun(CelestialBody):

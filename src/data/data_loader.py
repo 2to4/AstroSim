@@ -12,9 +12,9 @@ from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
 from datetime import datetime
 
-from .planet_repository import PlanetRepository
-from .config_manager import ConfigManager
-from ..domain.solar_system import SolarSystem
+from src.data.planet_repository import PlanetRepository
+from src.data.config_manager import ConfigManager
+from src.domain.solar_system import SolarSystem
 
 
 class DataLoadException(Exception):
@@ -77,6 +77,10 @@ class DataLoader:
             
             # 太陽系オブジェクトを構築
             solar_system = self.planet_repository.build_solar_system()
+            
+            # 初期位置を計算（J2000.0エポック: JD 2451545.0）
+            julian_date_j2000 = 2451545.0
+            solar_system.update_all_positions(julian_date_j2000)
             
             self.logger.info(f"デフォルト太陽系データを読み込みました ({solar_system.get_planet_count()}惑星)")
             return solar_system

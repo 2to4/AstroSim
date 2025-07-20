@@ -11,11 +11,11 @@ from typing import Optional, Dict, Any, Callable, List, Union
 from dataclasses import dataclass, field
 from enum import Enum
 
-from .exceptions import (
+from src.utils.exceptions import (
     AstroSimException, DependencyError, GPUError, VRAMError,
     MemoryError, PerformanceError, RenderingError
 )
-from .logging_config import get_logger
+from src.utils.logging_config import get_logger
 
 
 class FeatureLevel(Enum):

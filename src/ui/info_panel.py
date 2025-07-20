@@ -70,7 +70,8 @@ class InfoPanel(QWidget):
                 padding: 8px;
                 margin: 5px;
             }
-        """)\n        main_layout.addWidget(self.planet_name_label)
+        """)
+        main_layout.addWidget(self.planet_name_label)
         
         # スクロール可能な情報表示エリア
         scroll_area = QScrollArea()
@@ -465,6 +466,17 @@ class InfoPanel(QWidget):
             # 距離情報のみ更新（簡易実装）
             distance_from_sun = planet_data.get('distance_from_sun', '計算中')
             # 実際の実装では、特定のラベルのみ更新
+    
+    def update_planet_info(self, planet_data: Dict[str, Any]) -> None:
+        """
+        惑星情報を更新（display_planet_infoのエイリアス）
+        
+        SceneManagerからのイベント処理用メソッド
+        
+        Args:
+            planet_data: 惑星データの辞書
+        """
+        self.display_planet_info(planet_data)
     
     def __str__(self) -> str:
         """文字列表現"""

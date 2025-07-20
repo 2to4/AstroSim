@@ -10,9 +10,9 @@ from typing import Dict, Optional, List, Tuple, Any
 from vispy import scene, color
 from vispy.visuals.transforms import STTransform
 
-from ..domain.planet import Planet
-from ..domain.sun import Sun
-from ..domain.celestial_body import CelestialBody
+from src.domain.planet import Planet
+from src.domain.sun import Sun
+from src.domain.celestial_body import CelestialBody
 
 
 class Renderer3D:
@@ -45,8 +45,9 @@ class Renderer3D:
         # 表示設定
         self.show_orbits = True
         self.show_labels = True
+        self.show_axes = False
         self.scale_factor = 1.0
-        self.planet_scale = 1000.0  # 惑星サイズの拡大倍率
+        self.planet_scale = 200.0  # 惑星サイズの拡大倍率（太陽系全体表示用）
         
         # 座標変換（km -> 描画単位）
         self.distance_scale = 1.0 / 149597870.7  # km -> AU
@@ -67,8 +68,11 @@ class Renderer3D:
             'low': 8        # 低詳細: 8分割
         }
         
-        # 背景設定
-        self.canvas.bgcolor = (0.05, 0.05, 0.1, 1.0)  # 暗い宇宙背景
+        # 背景設定（黒い宇宙）
+        self.canvas.bgcolor = (0.0, 0.0, 0.0, 1.0)
+        
+        # 座標軸を追加
+        self._setup_axes()
     
     def _setup_camera(self) -> None:
         """カメラの初期設定"""
@@ -76,7 +80,7 @@ class Renderer3D:
             elevation=30,
             azimuth=30,
             fov=60,
-            distance=5.0,  # 5AU相当
+            distance=80.0,  # 外惑星も含めた太陽系全体が見える距離
             up='z'
         )
         self.view.camera = self.camera
@@ -107,6 +111,13 @@ class Renderer3D:
             self.ambient_light = None
             self.directional_light = None
     
+    def _setup_axes(self) -> None:
+        """座標軸の設定"""
+        # XYZAxisを使用（スケールを大きく）
+        self.axis = scene.visuals.XYZAxis(parent=self.view.scene, width=3)
+        self.axis.transform = STTransform(scale=(10, 10, 10))  # 太陽系全体表示に合わせる
+        self.axis.visible = self.show_axes  # 初期表示状態を設定
+    
     def add_sun(self, sun: Sun) -> None:
         """
         太陽をシーンに追加
@@ -114,8 +125,9 @@ class Renderer3D:
         Args:
             sun: 太陽オブジェクト
         """
-        # 太陽の半径をスケール（実際の太陽は小さすぎるため拡大）
-        sun_radius = max(0.005, sun.radius * self.planet_scale * self.distance_scale)
+        # 太陽の半径をスケール（km -> AU、実際の太陽は小さすぎるため拡大）
+        sun_radius_au = sun.radius / 149597870.7  # km to AU
+        sun_radius = max(0.1, sun_radius_au * self.planet_scale)  # 太陽系全体表示用サイズ
         
         # 太陽の色（温度に基づく）
         visual_props = sun.get_visual_properties()
@@ -147,16 +159,18 @@ class Renderer3D:
         """
         planet_name = planet.name
         
-        # 惑星の半径をスケール
-        planet_radius = max(0.002, planet.radius * self.planet_scale * self.distance_scale)
+        # 惑星の半径をスケール（km -> AU、さらに表示用に拡大）
+        planet_radius_au = planet.radius / 149597870.7  # km to AU
+        planet_radius = max(0.5, planet_radius_au * self.planet_scale)  # 80AU距離から見えるサイズ
         
         # 惑星の視覚プロパティを取得
         visual_props = planet.get_visual_properties()
         planet_color = visual_props['color']
         
         # 惑星の初期位置でLODレベルを決定
-        planet_position_scaled = planet.position * self.distance_scale
-        distance_to_camera = self._get_distance_to_camera(planet_position_scaled)
+        # planet.positionはkm単位なので、AUに変換
+        planet_position_au = planet.position / 149597870.7
+        distance_to_camera = self._get_distance_to_camera(planet_position_au)
         lod_level = self._determine_lod_level(distance_to_camera)
         
         # LODレベルに応じた惑星の球体を作成
@@ -164,16 +178,23 @@ class Renderer3D:
             planet_radius, planet_color, lod_level
         )
         
-        # ラベルを作成
+        # ラベルを作成（より大きく、明るく）
         label = scene.visuals.Text(
             planet_name,
-            color=(1, 1, 1, 0.8),
-            font_size=12,
+            color=(1, 1, 1, 1.0),  # 完全に不透明
+            font_size=16,  # より大きなフォント
             parent=self.view.scene
         )
         
         # 惑星の軌道線を作成
         orbit_line = self._create_orbit_line(planet)
+        
+        # 軌道線の初期表示状態を設定
+        orbit_line.visible = self.show_orbits
+        
+        # 惑星の初期位置を設定
+        planet_sphere.transform = STTransform(translate=planet_position_au)
+        label.pos = planet_position_au + np.array([0, 0, planet_radius * 2.0])  # ラベルを少し上に
         
         # 惑星の視覚要素を保存
         self.planet_visuals[planet_name] = {
@@ -232,14 +253,14 @@ class Renderer3D:
                 (-sin_omega * sin_w + cos_omega * cos_w * cos_i) * y_orbit
             z = sin_w * sin_i * x_orbit + cos_w * sin_i * y_orbit
             
-            # スケール調整
-            points.append([x * self.distance_scale, y * self.distance_scale, z * self.distance_scale])
+            # スケール調整（km -> AU）
+            points.append([x / 149597870.7, y / 149597870.7, z / 149597870.7])
         
         # 軌道線を作成
         orbit_line = scene.visuals.Line(
             pos=np.array(points),
-            color=(0.5, 0.5, 0.5, 0.3),
-            width=1.0,
+            color=(0.6, 0.9, 1.0, 1.0),  # 明るいシアン色、完全不透明
+            width=1.5,  # 適度な太さ
             parent=self.view.scene
         )
         
@@ -309,15 +330,15 @@ class Renderer3D:
         
         Args:
             planet_name: 惑星名
-            position: 新しい位置 (km)
+            position: 新しい位置 (AU)
         """
         if planet_name not in self.planet_visuals:
             return
         
         visual_data = self.planet_visuals[planet_name]
         
-        # 位置をスケール変換
-        scaled_position = position * self.distance_scale
+        # 位置はすでにAU単位なので、そのまま使用
+        scaled_position = position
         
         # カメラからの距離を計算してLODレベルを決定
         distance_to_camera = self._get_distance_to_camera(scaled_position)
@@ -364,8 +385,7 @@ class Renderer3D:
         new_sphere.transform = current_transform
         
         # 選択状態の復元
-        if self.selected_planet == planet_name:
-            new_sphere.color = (1.0, 1.0, 0.0, 1.0)  # ハイライト色
+        # Vispyでは色を直接変更できないため、選択状態は別の方法で表現
         
         # 古い球体を削除
         if old_sphere.parent:
@@ -397,10 +417,31 @@ class Renderer3D:
             position = (0, 0, 0)
         
         # 回転と平行移動を組み合わせた変換
-        sphere.transform = STTransform(
-            translate=position,
-            rotate=(rotation_angle, 0, 0, 1)  # Z軸周りの回転
-        )
+        # STTransformは回転をサポートしないため、MatrixTransformを使用
+        from vispy.visuals.transforms import MatrixTransform
+        import numpy as np
+        
+        # 回転行列を作成
+        cos_theta = np.cos(np.radians(rotation_angle))
+        sin_theta = np.sin(np.radians(rotation_angle))
+        rotation_matrix = np.array([
+            [cos_theta, -sin_theta, 0, 0],
+            [sin_theta, cos_theta, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1]
+        ])
+        
+        # 平行移動行列
+        translation_matrix = np.eye(4)
+        # positionが4要素の場合（同次座標）、最初の3要素のみ使用
+        if len(position) == 4:
+            translation_matrix[:3, 3] = position[:3]
+        else:
+            translation_matrix[:3, 3] = position
+        
+        # 変換を組み合わせる
+        transform_matrix = translation_matrix @ rotation_matrix
+        sphere.transform = MatrixTransform(transform_matrix)
     
     def set_planet_selected(self, planet_name: Optional[str]) -> None:
         """
@@ -416,7 +457,8 @@ class Renderer3D:
             # 元の色に戻す
             planet = old_visual['planet']
             visual_props = planet.get_visual_properties()
-            old_sphere.color = visual_props['color']
+            # Vispyでは色を直接変更できないため、選択解除時は何もしない
+            # 将来的には選択リングなどで表現することを検討
         
         # 新しい選択を適用
         self.selected_planet = planet_name
@@ -424,7 +466,8 @@ class Renderer3D:
             visual_data = self.planet_visuals[planet_name]
             sphere = visual_data['sphere']
             # 選択状態を示すために明るくする
-            sphere.color = (1.0, 1.0, 0.0, 1.0)  # 黄色でハイライト
+            # Vispyでは色を直接変更できないため、選択時は何もしない
+            # 将来的には選択リングなどで表現することを検討
     
     def set_orbit_visibility(self, visible: bool) -> None:
         """
@@ -451,6 +494,18 @@ class Renderer3D:
         for visual_data in self.planet_visuals.values():
             label = visual_data['label']
             label.visible = visible
+    
+    def set_axes_visibility(self, visible: bool) -> None:
+        """
+        座標軸の表示/非表示を設定
+        
+        Args:
+            visible: 表示するかどうか
+        """
+        self.show_axes = visible
+        
+        if hasattr(self, 'axis') and self.axis:
+            self.axis.visible = visible
     
     def set_scale_factor(self, factor: float) -> None:
         """
