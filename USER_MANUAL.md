@@ -122,19 +122,42 @@ pip install -r requirements.txt
 
 ### 基本起動
 
+AstroSimには複数の起動方法があります：
+
+#### 方法1: モジュール実行（推奨）
+
+```bash
+cd AstroSim
+python -m src.main
+```
+
+#### 方法2: エントリーポイント（setuptools経由でインストール後）
+
+```bash
+# GUI起動
+astrosim-gui
+
+# コンソール起動
+astrosim
+```
+
+#### 方法3: 直接実行（一部環境で制限あり）
+
 ```bash
 cd AstroSim
 python src/main.py
 ```
 
+**注意**: 環境によっては方法3では`ModuleNotFoundError`が発生する場合があります。その場合は方法1を使用してください。
+
 ### コマンドラインオプション
 
 ```bash
 # ヘルプ表示
-python src/main.py --help
+python -m src.main --help
 
 # バージョン情報表示
-python src/main.py --version
+python -m src.main --version
 ```
 
 ### 起動確認
@@ -335,9 +358,24 @@ AstroSim/
 **症状**: `python src/main.py` でエラーが発生
 
 **原因と解決法**:
+- **モジュール導入エラー**: `python -m src.main` を使用
 - **依存関係不足**: `pip install PyQt6 vispy numpy scipy`
 - **Python未インストール**: Python 3.8以上をインストール
 - **PATH設定**: 環境変数PATHにPythonを追加
+
+**症状**: `ModuleNotFoundError: No module named 'src'`
+
+**原因と解決法**:
+- 相対インポートの問題です。以下の方法で解決：
+  ```bash
+  # 推奨方法
+  python -m src.main
+  
+  # または、PYTHONPATHを設定
+  export PYTHONPATH=$PYTHONPATH:.  # Linux/Mac
+  set PYTHONPATH=%PYTHONPATH%;.    # Windows
+  python src/main.py
+  ```
 
 #### 2. 3D表示が正しく動作しない
 
